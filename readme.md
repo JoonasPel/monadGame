@@ -1,3 +1,5 @@
+Made by Joonas Pelttari
+
 The current approach does not reset at all but instead finds the target in one run. The next step is to implement a feature to track the squares we have visited and save them to a graph and then when we find the target, reset and do BFS. (if i understood rules correctly).
 
 So the current approach is trying to find the target by checking the possible squares to move and calculating a priority value for every possibility, then choosing the best (lowest) priority. \
