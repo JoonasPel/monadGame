@@ -6,123 +6,59 @@ using Newtonsoft.Json.Linq;
 
 public class Program
 {
-  private static string?
-      _playerToken = Environment.GetEnvironmentVariable("PLAYER_TOKEN")
-    , _levelIDToken = Environment.GetEnvironmentVariable("LEVEL_ID")
-    , _instanceToken = ""
-    , _entityID = "";
-  private HttpClient _client = new HttpClient();
-
   public static async Task Main()
   {
-    DotNetEnv.Env.Load("./.env");
-    Program app = new Program();
-    string? body = await app.CreateGame();
-    if (body is null) app.CloseProgram();
-    _entityID = GetEntityID(body);
-    ClientWebSocket websocket = await ConnectWebsocket();
-    bool subscribeSuccess = await SubscribeToGame(websocket);
-    if (!subscribeSuccess) app.CloseProgram();
+    (string playerToken, string levelIdToken) = await LoadEnvVariables();
+    ClientUtils.SetTokens(playerToken, levelIdToken);
+    string? gameData = await ClientUtils.CreateGame();
+    if (gameData is null) await CloseProgram(websocket: null);
+    ClientUtils.SetEntityId(gameData);
+    ClientWebSocket websocket = await ClientUtils.ConnectWebsocket();
+    bool subscribeSuccess = await ClientUtils.SubscribeToGame(websocket);
+    if (!subscribeSuccess) await CloseProgram(websocket);
     Action action = new Action();
     while (true)
     {
-      JObject? gameState = await WaitForNextGameTick(websocket);
-      // object payload = action.GenerateAction(gameState);
-      object payload = action.GenerateManualActionByUser();
-      string message = CreateMessage(payload);
-      await SendMessage(websocket, message);
-      // TODO Detect game win or something and close program.
+      JObject? gameState = await ClientUtils.WaitForNextGameTick(websocket);
+      if (gameState is null) await CloseProgram(websocket);
+      object payload = action.GenerateAction(gameState);
+      Thread.Sleep(50);  // slow down to not get request limited
+      string message = ClientUtils.CreateMessage(payload);
+      await ClientUtils.SendMessage(websocket, message);
     }
   }
 
-  private static string CreateMessage(object payload)
+  private static async Task CloseProgram(ClientWebSocket? websocket)
   {
-    object data = new
+    if (websocket is not null)
     {
-      gameId = _entityID,
-      payload,
-    };
-    return JsonConvert.SerializeObject(new object[] { "run-command", data });
-  }
-
-  private static async Task<JObject?> WaitForNextGameTick(ClientWebSocket websocket)
-  {
-    while (websocket.State == WebSocketState.Open)
-    {
-      byte[] buffer = new byte[1024];
-      WebSocketReceiveResult result = await websocket.ReceiveAsync(
-        new ArraySegment<byte>(buffer), CancellationToken.None);
-      if (result.MessageType == WebSocketMessageType.Text)
+      try
       {
-        string receivedMsg = Encoding.UTF8.GetString(buffer, 0, result.Count);
-        dynamic? dataObject = JsonConvert.DeserializeObject(receivedMsg);
-        string temp = dataObject[1]["gameState"];
-        JObject gameState = JsonConvert.DeserializeObject<JObject>(temp);
-        return gameState;
+        await websocket.CloseAsync(
+          WebSocketCloseStatus.NormalClosure, "Done", CancellationToken.None);
       }
+      catch { }
     }
-    return null;
-  }
-
-  private static async Task<bool> SubscribeToGame(ClientWebSocket websocket)
-  {
-    if (websocket.State == WebSocketState.Open)
-    {
-      object payload = new { id = _entityID };
-      string message = JsonConvert.SerializeObject(
-        new object[] { "sub-game", payload });
-      await SendMessage(websocket, message);
-      return true;
-    }
-    return false;
-  }
-
-  private static async Task<ClientWebSocket> ConnectWebsocket()
-  {
-    var websocket = new ClientWebSocket();
-    await websocket.ConnectAsync(new Uri(
-      $"ws://goldrush.monad.fi/backend/{_playerToken}"), CancellationToken.None);
-    return websocket;
-  }
-
-  private static async Task SendMessage(ClientWebSocket webSocket, string message)
-  {
-    byte[] messageBytes = Encoding.UTF8.GetBytes(message);
-    await webSocket.SendAsync(
-      new ArraySegment<byte>(messageBytes),
-      WebSocketMessageType.Text,
-      true,
-      CancellationToken.None);
-  }
-
-  private async Task<string?> CreateGame()
-  {
-    _client.DefaultRequestHeaders.Add("Authorization", _playerToken);
-    try
-    {
-      HttpResponseMessage response = await _client.PostAsync(
-        $"https://goldrush.monad.fi/backend/api/levels/{_levelIDToken}", null);
-      response.EnsureSuccessStatusCode();
-      string body = await response.Content.ReadAsStringAsync();
-      return body;
-    }
-    catch (HttpRequestException ex)
-    {
-      Console.WriteLine($"Error Creating Game. {ex}");
-      return null;
-    }
-  }
-
-  private static string GetEntityID(string data)
-  {
-    JObject? dataObject = JsonConvert.DeserializeObject<JObject>(data);
-    return dataObject["entityId"].ToString();
-  }
-
-  private void CloseProgram()
-  {
     Console.WriteLine("Good Bye");
     Environment.Exit(0);
+  }
+
+  private static async Task<(string, string)> LoadEnvVariables()
+  {
+    DotNetEnv.Env.Load("./.env");
+    string playerToken = Environment.GetEnvironmentVariable("PLAYER_TOKEN") ?? "";
+    string levelIdToken = Environment.GetEnvironmentVariable("LEVEL_ID") ?? "";
+    if (playerToken == "")
+    {
+      Console.WriteLine("Can't find playerToken from .env");
+      await CloseProgram(websocket: null);
+    }
+    if (levelIdToken == "")
+    {
+      Console.WriteLine("Can't find levelIdToken from .env");
+      await CloseProgram(websocket: null);
+    }
+    return (playerToken, levelIdToken);
   }
 }
 
