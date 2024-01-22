@@ -27,15 +27,12 @@ public class Program
     while (true)
     {
       JObject? gameState = await WaitForNextGameTick(websocket);
-      object payload = action.GenerateAction(gameState);
-      Thread.Sleep(800);
+      // object payload = action.GenerateAction(gameState);
+      object payload = action.GenerateManualActionByUser();
       string message = CreateMessage(payload);
       await SendMessage(websocket, message);
       // TODO Detect game win or something and close program.
     }
-
-    await websocket.CloseAsync(
-      WebSocketCloseStatus.NormalClosure, "Done", CancellationToken.None);
   }
 
   private static string CreateMessage(object payload)
