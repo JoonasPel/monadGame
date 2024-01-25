@@ -8,7 +8,8 @@ public class Program
 {
   public static async Task Main()
   {
-    (string playerToken, string levelIdToken) = await LoadEnvVariables();
+    string level = AskUserWhatLevelToPlay();
+    (string playerToken, string levelIdToken) = await LoadEnvVariables(level);
     ClientUtils.SetTokens(playerToken, levelIdToken);
     string? gameData = await ClientUtils.CreateGame();
     if (gameData is null) await CloseProgram(websocket: null);
@@ -43,11 +44,13 @@ public class Program
     Environment.Exit(0);
   }
 
-  private static async Task<(string, string)> LoadEnvVariables()
+  private static async Task<(string, string)> LoadEnvVariables(string level)
   {
     DotNetEnv.Env.Load("./.env");
-    string playerToken = Environment.GetEnvironmentVariable("PLAYER_TOKEN") ?? "";
-    string levelIdToken = Environment.GetEnvironmentVariable("LEVEL_ID") ?? "";
+    string playerToken = Environment.GetEnvironmentVariable(
+      "PLAYER_TOKEN") ?? "";
+    string levelIdToken = Environment.GetEnvironmentVariable(
+      $"LEVEL_ID_{level}") ?? "";
     if (playerToken == "")
     {
       Console.WriteLine("Can't find playerToken from .env");
@@ -59,6 +62,24 @@ public class Program
       await CloseProgram(websocket: null);
     }
     return (playerToken, levelIdToken);
+  }
+
+  private static string AskUserWhatLevelToPlay()
+  {
+    Console.WriteLine($"What level do you want to play? Give Number only.");
+    do
+    {
+      string? input = Console.ReadLine();
+      if (int.TryParse(input, out _))
+      {
+        return input;
+      }
+      else
+      {
+        Console.WriteLine("Invalid Input! Try again.");
+      }
+    }
+    while (true);
   }
 }
 

@@ -9,8 +9,14 @@ X = the amount of times we have visited that specific square before.
 
 #### Running the code:
 Remember to add an .env file to the project root that has your tokens: \
+The app will ask you what level to play, so you don't need every level token. \
 PLAYER_TOKEN=XXXXXX \
-LEVEL_ID=YYYYY
+LEVEL_ID_1=AAAA \
+LEVEL_ID_2=BBBB \
+LEVEL_ID_3=CCCC \
+LEVEL_ID_4=DDDD \
+LEVEL_ID_5=EEEE \
+
 
 #### Project Structure
 **Action.cs** implements the moving logic. \
