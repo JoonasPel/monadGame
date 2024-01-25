@@ -22,10 +22,12 @@ public class Program
     bool subscribeSuccess = await ClientUtils.SubscribeToGame(websocket);
     if (!subscribeSuccess) await CloseProgram(websocket, msg: "game-sub fail");
     MovementLogic movement = new MovementLogic();
+    Action printScore = ScorePrinter();
     while (true)
     {
       JObject? tickData = await ClientUtils.WaitForNextGameTick(websocket);
       if (tickData is null) continue;
+      printScore();
       if (GameWon(tickData)) await CloseProgram(websocket, msg: "You Won :)");
       object? payload = movement.GenerateAction(tickData);
       if (payload is null) continue;
@@ -46,7 +48,7 @@ public class Program
       }
       catch { }
     }
-    Console.WriteLine($"{msg}.\nGood Bye");
+    Console.WriteLine($"\n{msg}\nGood Bye");
     Environment.Exit(0);
   }
 
@@ -86,6 +88,15 @@ public class Program
     }
     catch { }
     return false;
+  }
+
+  private static Action ScorePrinter()
+  {
+    int score = 0;
+    return () =>
+    {
+      Console.Write($"\rScore: {score++}");
+    };
   }
 }
 
