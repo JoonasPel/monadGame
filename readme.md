@@ -15,8 +15,7 @@ LEVEL_ID_1=AAAA \
 LEVEL_ID_2=BBBB \
 LEVEL_ID_3=CCCC \
 LEVEL_ID_4=DDDD \
-LEVEL_ID_5=EEEE \
-
+LEVEL_ID_5=EEEE
 
 #### Project Structure
 **Action.cs** implements the moving logic. \
