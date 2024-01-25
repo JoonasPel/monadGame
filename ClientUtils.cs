@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Net.WebSockets;
 using System.Text;
 using Newtonsoft.Json;
