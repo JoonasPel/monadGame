@@ -9,20 +9,28 @@ public class Program
   public static async Task Main()
   {
     string level = AskUserWhatLevelToPlay();
-    (string playerToken, string levelIdToken) = await LoadEnvVariables(level);
+    (string playerToken, string levelIdToken) = LoadEnvVariables(level);
+    if (playerToken == "" || levelIdToken == "")
+    {
+      await CloseProgram(websocket: null, msg: "Error loading env variables");
+    }
     ClientUtils.SetTokens(playerToken, levelIdToken);
     string? gameData = await ClientUtils.CreateGame();
-    if (gameData is null) await CloseProgram(websocket: null);
+    if (gameData is null)
+    {
+      await CloseProgram(websocket: null, msg: "Could not start a new game");
+    }
     ClientUtils.SetEntityId(gameData);
     ClientWebSocket websocket = await ClientUtils.ConnectWebsocket();
     bool subscribeSuccess = await ClientUtils.SubscribeToGame(websocket);
-    if (!subscribeSuccess) await CloseProgram(websocket);
+    if (!subscribeSuccess) await CloseProgram(websocket, msg: "game-sub fail");
     Action action = new Action();
     while (true)
     {
-      JObject? gameState = await ClientUtils.WaitForNextGameTick(websocket);
-      if (gameState is null) await CloseProgram(websocket);
-      object? payload = action.GenerateAction(gameState);
+      JObject? tickData = await ClientUtils.WaitForNextGameTick(websocket);
+      if (tickData is null) continue;
+      if (GameWon(tickData)) await CloseProgram(websocket, msg: "You Won :)");
+      object? payload = action.GenerateAction(tickData);
       if (payload is null) continue;
       Thread.Sleep(50);  // slow down to not get request limited
       string message = ClientUtils.CreateMessage(payload);
@@ -30,7 +38,7 @@ public class Program
     }
   }
 
-  private static async Task CloseProgram(ClientWebSocket? websocket)
+  private static async Task CloseProgram(ClientWebSocket? websocket, string msg)
   {
     if (websocket is not null)
     {
@@ -41,27 +49,17 @@ public class Program
       }
       catch { }
     }
-    Console.WriteLine("Good Bye");
+    Console.WriteLine($"{msg}.\nGood Bye");
     Environment.Exit(0);
   }
 
-  private static async Task<(string, string)> LoadEnvVariables(string level)
+  private static (string, string) LoadEnvVariables(string level)
   {
     DotNetEnv.Env.Load("./.env");
     string playerToken = Environment.GetEnvironmentVariable(
       "PLAYER_TOKEN") ?? "";
     string levelIdToken = Environment.GetEnvironmentVariable(
       $"LEVEL_ID_{level}") ?? "";
-    if (playerToken == "")
-    {
-      Console.WriteLine("Can't find playerToken from .env");
-      await CloseProgram(websocket: null);
-    }
-    if (levelIdToken == "")
-    {
-      Console.WriteLine("Can't find levelIdToken from .env");
-      await CloseProgram(websocket: null);
-    }
     return (playerToken, levelIdToken);
   }
 
@@ -81,6 +79,16 @@ public class Program
       }
     }
     while (true);
+  }
+
+  private static bool GameWon(JObject tickData)
+  {
+    try
+    {
+      return tickData["status"].ToString() == "FINISHED";
+    }
+    catch { }
+    return false;
   }
 }
 

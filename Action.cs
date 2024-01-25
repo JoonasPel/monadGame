@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 public class Action
@@ -27,7 +28,7 @@ public class Action
     return Math.Sqrt((Math.Pow(x1 - x2, 2) + Math.Pow(y1 - y2, 2)));
   }
 
-  public object? GenerateAction(JObject gameState)
+  public object? GenerateAction(JObject tickData)
   {
     try
     {
@@ -38,6 +39,8 @@ public class Action
         return MoveAction();
       }
 
+      string temp = tickData["gameState"].ToString();
+      JObject gameState = JsonConvert.DeserializeObject<JObject>(temp);
       int walls = (int)gameState["square"];
       string wallsBinary = Convert.ToString(walls, 2);
       string wallsPadded = wallsBinary.PadLeft(4, '0');

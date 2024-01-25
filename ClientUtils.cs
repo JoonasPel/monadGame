@@ -6,6 +6,7 @@ using Newtonsoft.Json.Linq;
 
 public static class ClientUtils
 {
+  private static readonly string backendUrl = "goldrush.monad.fi/backend";
   private static string? _playerToken;
   private static string? _levelIdToken;
   private static string? _entityId;
@@ -32,13 +33,18 @@ public static class ClientUtils
       if (result.MessageType == WebSocketMessageType.Text)
       {
         string receivedMsg = Encoding.UTF8.GetString(buffer, 0, result.Count);
+        // TODO implement an actual class for the data object
         dynamic? dataObject = JsonConvert.DeserializeObject(receivedMsg);
-        string temp = dataObject[1]["gameState"];
-        JObject gameState = JsonConvert.DeserializeObject<JObject>(temp);
-        return gameState;
+        JObject tickData = dataObject[1];
+        return tickData;
       }
     }
-    catch { }
+    catch (Exception e)
+    {
+      Console.WriteLine(
+        $"Encountered Error while getting tick data from backend:\n{e.Message}");
+      return null;
+    }
     return null;
   }
 
@@ -59,7 +65,7 @@ public static class ClientUtils
   {
     var websocket = new ClientWebSocket();
     await websocket.ConnectAsync(new Uri(
-      $"ws://goldrush.monad.fi/backend/{_playerToken}"), CancellationToken.None);
+      $"ws://{backendUrl}/{_playerToken}"), CancellationToken.None);
     return websocket;
   }
 
@@ -79,7 +85,7 @@ public static class ClientUtils
     try
     {
       HttpResponseMessage response = await _client.PostAsync(
-        $"https://goldrush.monad.fi/backend/api/levels/{_levelIdToken}", null);
+        $"https://{backendUrl}/api/levels/{_levelIdToken}", null);
       response.EnsureSuccessStatusCode();
       string body = await response.Content.ReadAsStringAsync();
       return body;
