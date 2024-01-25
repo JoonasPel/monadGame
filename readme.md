@@ -18,6 +18,6 @@ LEVEL_ID_4=DDDD \
 LEVEL_ID_5=EEEE
 
 #### Project Structure
-**Action.cs** implements the moving logic. \
+**MovementLogic.cs** implements the moving logic. \
 **ClientUtils.cs** implements needed things to communicate with the backend. \
 **Program.cs** orchestrates the app.
