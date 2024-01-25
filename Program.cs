@@ -21,13 +21,13 @@ public class Program
     ClientWebSocket websocket = await ClientUtils.ConnectWebsocket();
     bool subscribeSuccess = await ClientUtils.SubscribeToGame(websocket);
     if (!subscribeSuccess) await CloseProgram(websocket, msg: "game-sub fail");
-    Action action = new Action();
+    MovementLogic movement = new MovementLogic();
     while (true)
     {
       JObject? tickData = await ClientUtils.WaitForNextGameTick(websocket);
       if (tickData is null) continue;
       if (GameWon(tickData)) await CloseProgram(websocket, msg: "You Won :)");
-      object? payload = action.GenerateAction(tickData);
+      object? payload = movement.GenerateAction(tickData);
       if (payload is null) continue;
       Thread.Sleep(50);  // slow down to not get request limited
       string message = ClientUtils.CreateMessage(payload);

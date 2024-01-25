@@ -2,13 +2,13 @@ using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-public class Action
+public class MovementLogic
 {
   private int[] _rotations = new int[] { 0, 45, 90, 135, 180, 225, 270, 315 };
   private Dictionary<(int, int), int> _visitedSquaresCount;
   private static bool _nextActionIsMove = false;
 
-  public Action()
+  public MovementLogic()
   {
     _visitedSquaresCount = new Dictionary<(int, int), int>();
   }
