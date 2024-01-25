@@ -22,7 +22,8 @@ public class Program
     {
       JObject? gameState = await ClientUtils.WaitForNextGameTick(websocket);
       if (gameState is null) await CloseProgram(websocket);
-      object payload = action.GenerateAction(gameState);
+      object? payload = action.GenerateAction(gameState);
+      if (payload is null) continue;
       Thread.Sleep(50);  // slow down to not get request limited
       string message = ClientUtils.CreateMessage(payload);
       await ClientUtils.SendMessage(websocket, message);

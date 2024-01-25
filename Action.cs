@@ -27,53 +27,62 @@ public class Action
     return Math.Sqrt((Math.Pow(x1 - x2, 2) + Math.Pow(y1 - y2, 2)));
   }
 
-  public object GenerateAction(JObject gameState)
+  public object? GenerateAction(JObject gameState)
   {
-    // Check if last round we decided to move next (this) round
-    if (_nextActionIsMove == true)
+    try
     {
-      _nextActionIsMove = false;
-      return MoveAction();
-    }
+      // Check if last round we decided to move next (this) round
+      if (_nextActionIsMove == true)
+      {
+        _nextActionIsMove = false;
+        return MoveAction();
+      }
 
-    int walls = (int)gameState["square"];
-    string wallsBinary = Convert.ToString(walls, 2);
-    string wallsPadded = wallsBinary.PadLeft(4, '0');
-    int currentRotation = (int)gameState["player"]["rotation"];
-    int posX = (int)gameState["player"]["position"]["x"];
-    int posY = (int)gameState["player"]["position"]["y"];
-    int targetX = (int)gameState["target"]["x"];
-    int targetY = (int)gameState["target"]["y"];
+      int walls = (int)gameState["square"];
+      string wallsBinary = Convert.ToString(walls, 2);
+      string wallsPadded = wallsBinary.PadLeft(4, '0');
+      int currentRotation = (int)gameState["player"]["rotation"];
+      int posX = (int)gameState["player"]["position"]["x"];
+      int posY = (int)gameState["player"]["position"]["y"];
+      int targetX = (int)gameState["target"]["x"];
+      int targetY = (int)gameState["target"]["y"];
 
-    _visitedSquaresCount.TryGetValue((posX, posY), out int count);
-    _visitedSquaresCount[(posX, posY)] = count + 1;
-    var possibleNewPositions = new PriorityQueue<(int, int), double>();
-    // check walls and see where we can go + calculate the priority
-    if (wallsPadded[1] == '0') CheckPossiblePos(posX + 1, posY);
-    if (wallsPadded[3] == '0') CheckPossiblePos(posX - 1, posY);
-    if (wallsPadded[0] == '0') CheckPossiblePos(posX, posY - 1);
-    if (wallsPadded[2] == '0') CheckPossiblePos(posX, posY + 1);
-    void CheckPossiblePos(int newPosX, int newPosY)
-    {
-      double dist = EuclidianDistance(newPosX, targetX, newPosY, targetY);
-      _visitedSquaresCount.TryGetValue((newPosX, newPosY), out int visitCount);
-      // weighting 2.5 is just a number from the sky
-      possibleNewPositions.Enqueue((newPosX, newPosY), dist + 2.5 * visitCount);
+      _visitedSquaresCount.TryGetValue((posX, posY), out int count);
+      _visitedSquaresCount[(posX, posY)] = count + 1;
+      var possibleNewPositions = new PriorityQueue<(int, int), double>();
+      // check walls and see where we can go + calculate the priority
+      if (wallsPadded[1] == '0') CheckPossiblePos(posX + 1, posY);
+      if (wallsPadded[3] == '0') CheckPossiblePos(posX - 1, posY);
+      if (wallsPadded[0] == '0') CheckPossiblePos(posX, posY - 1);
+      if (wallsPadded[2] == '0') CheckPossiblePos(posX, posY + 1);
+      void CheckPossiblePos(int newPosX, int newPosY)
+      {
+        double dist = EuclidianDistance(newPosX, targetX, newPosY, targetY);
+        _visitedSquaresCount.TryGetValue((newPosX, newPosY), out int visitCount);
+        // weighting 2.5 is just a number from the sky
+        possibleNewPositions.Enqueue((newPosX, newPosY), dist + 2.5 * visitCount);
+      }
+      // get best square to go
+      (int GoToX, int GoToY) = possibleNewPositions.Dequeue();
+      // find rotation needed
+      int rotationNeeded = -1;
+      if (GoToX < posX) rotationNeeded = 270;
+      if (GoToX > posX) rotationNeeded = 90;
+      if (GoToY < posY) rotationNeeded = 0;
+      if (GoToY > posY) rotationNeeded = 180;
+      // if we have right rotation atm, move. else rotate now and move next round
+      if (currentRotation == rotationNeeded) return MoveAction();
+      else
+      {
+        _nextActionIsMove = true;
+        return RotateAction(rotationNeeded);
+      }
     }
-    // get best square to go
-    (int GoToX, int GoToY) = possibleNewPositions.Dequeue();
-    // find rotation needed
-    int rotationNeeded = -1;
-    if (GoToX < posX) rotationNeeded = 270;
-    if (GoToX > posX) rotationNeeded = 90;
-    if (GoToY < posY) rotationNeeded = 0;
-    if (GoToY > posY) rotationNeeded = 180;
-    // if we have right rotation atm, move. else rotate now and move next round
-    if (currentRotation == rotationNeeded) return MoveAction();
-    else
+    catch (Exception e)
     {
-      _nextActionIsMove = true;
-      return RotateAction(rotationNeeded);
+      Console.WriteLine(
+        $"Encountered Error while Generating Action:\n{e.Message}");
+      return null;
     }
   }
 
