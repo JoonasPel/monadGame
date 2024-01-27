@@ -96,10 +96,9 @@ public static class ClientUtils
     }
   }
 
-  public static void SetEntityId(string data)
+  public static void SetEntityId(JObject gameDataObj)
   {
-    JObject? dataObject = JsonConvert.DeserializeObject<JObject>(data);
-    _entityId = dataObject["entityId"].ToString();
+    _entityId = gameDataObj["entityId"].ToString();
   }
 
   public static void SetTokens(string playerToken, string levelIdToken)
